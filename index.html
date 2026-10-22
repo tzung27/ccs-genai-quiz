@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>CCS 生成式 AI 題庫</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 左側考綱目錄 + 右側內容（重點整理 → 考題練習）；手機上目錄改為頂端橫向捲動列 */
+:root {
+  --bg: #F2F5F4;
+  --surface: #FFFFFF;
+  --ink: #17222A;
+  --muted: #5B6870;
+  --line: #D7DEDC;
+  --accent: #0E6B63;
+  --accent-soft: #E1F0EE;
+  --mark: #FFE58A;
+  --mark-ink: #17222A;
+  --good: #1D7A3A;
+  --good-soft: #E3F3E7;
+  --bad: #B3261E;
+  --bad-soft: #FBE6E4;
+  --f-display: "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+  --f-body: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0E1416; --surface: #162024; --ink: #E3EAE8; --muted: #97A4A9; --line: #29363A;
+    --accent: #52C3B6; --accent-soft: #173431; --mark: #6B5814; --mark-ink: #FFF3C4;
+    --good: #6FD08C; --good-soft: #15301E; --bad: #F08C84; --bad-soft: #3A1B19;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0E1416; --surface: #162024; --ink: #E3EAE8; --muted: #97A4A9; --line: #29363A;
+  --accent: #52C3B6; --accent-soft: #173431; --mark: #6B5814; --mark-ink: #FFF3C4;
+  --good: #6FD08C; --good-soft: #15301E; --bad: #F08C84; --bad-soft: #3A1B19;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--f-body); font-size: 16px; line-height: 1.75;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+mark { background: var(--mark); color: var(--mark-ink); padding: 0 .2em; border-radius: 2px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.shell {
+  display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 40px;
+  max-width: 1180px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+aside { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; display: flex; flex-direction: column; gap: 20px; }
+.brand { display: flex; flex-direction: column; gap: 4px; }
+.brand .code { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
+.brand h1 { font-family: var(--f-display); font-weight: 900; font-size: 26px; line-height: 1.3; margin: 0; text-wrap: balance; }
+.brand p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+nav { display: flex; flex-direction: column; gap: 4px; }
+nav a {
+  display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline;
+  text-decoration: none; color: var(--ink); padding: 10px 12px; border-radius: 6px; border: 1px solid transparent;
+}
+nav a:hover { background: var(--surface); }
+nav a[aria-current="page"] { background: var(--surface); border-color: var(--line); }
+nav a .n { font-family: var(--f-mono); font-size: 12px; color: var(--accent); grid-row: span 2; padding-top: 3px; }
+nav a .t { font-weight: 500; font-size: 15px; line-height: 1.45; }
+nav a .p { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .3s; }
+
+main { min-width: 0; display: flex; flex-direction: column; gap: 40px; }
+.ch-head { display: flex; flex-direction: column; gap: 6px; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
+.ch-head .eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
+.ch-head h2 { font-family: var(--f-display); font-weight: 900; font-size: clamp(26px, 4vw, 38px); line-height: 1.3; margin: 0; text-wrap: balance; }
+.ch-head .en { color: var(--muted); font-size: 15px; }
+
+section > h3 {
+  font-family: var(--f-display); font-size: 21px; margin: 0 0 16px; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+section > h3 small { font-family: var(--f-mono); font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .08em; }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; min-width: 0; }
+.note h4 { margin: 0 0 8px; font-size: 16px; font-weight: 700; }
+.note ul, .note ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+.note li { font-size: 15px; }
+.note li::marker { color: var(--accent); }
+.note .tag { font-family: var(--f-mono); font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-right: 4px; white-space: nowrap; }
+.tag.ok { background: var(--good-soft); color: var(--good); }
+.tag.no { background: var(--bad-soft); color: var(--bad); }
+
+.quiz-tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 16px; }
+.score { font-family: var(--f-mono); font-size: 14px; font-variant-numeric: tabular-nums; margin-right: auto; }
+.score b { color: var(--accent); font-size: 18px; }
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.btn.primary:hover { color: var(--surface); opacity: .9; }
+
+.qs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.q { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; }
+.q-top { display: flex; gap: 12px; align-items: baseline; }
+.q-no { font-family: var(--f-mono); font-size: 13px; color: var(--accent); flex: none; }
+.q-type { font-family: var(--f-mono); font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 0 5px; flex: none; }
+.q-text { margin: 0; font-weight: 500; min-width: 0; }
+.q-src { font-size: 12px; color: var(--muted); margin: 4px 0 0 0; }
+.opts { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.opt {
+  width: 100%; text-align: left; display: grid; grid-template-columns: 28px 1fr; gap: 8px; align-items: baseline;
+  background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; cursor: pointer; line-height: 1.6;
+}
+.opt:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.opt .k { font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.opt:disabled { cursor: default; }
+.opt.correct { border-color: var(--good); background: var(--good-soft); }
+.opt.correct .k { color: var(--good); }
+.opt.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.opt.wrong .k { color: var(--bad); }
+.exp { margin-top: 14px; padding: 12px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 6px 6px 0; font-size: 15px; }
+.exp .verdict { font-weight: 700; margin-right: 6px; }
+.exp .verdict.ok { color: var(--good); }
+.exp .verdict.no { color: var(--bad); }
+.exp .verdict.peek { color: var(--accent); }
+
+.result { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; margin-top: 16px; }
+.result strong { font-family: var(--f-display); font-size: 28px; }
+
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 20px 48px; }
+  aside { position: static; }
+  nav { flex-direction: row; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+  nav a { flex: none; width: 200px; }
+}
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="shell">
+  <aside>
+    <div class="brand">
+      <span class="code">CCS · Generative AI Foundations</span>
+      <h1>生成式 AI 核心能力題庫</h1>
+      <p>四大考綱重點整理，每章附考題與解析。點選選項即可看到答案，作答進度會記在這台裝置上。</p>
+    </div>
+    <nav id="nav"></nav>
+  </aside>
+  <main id="main"></main>
+</div>
+
+<script>
+const CHAPTERS = [
+{
+  id: "ch1", n: "考綱一", title: "生成式 AI 方法與方法論", en: "Generative AI Concepts & Methodology",
+  notes: [
+    { h: "生成式 AI 的基本特性", html: `<ul>
+      <li><span class="tag ok">正確</span>使用<mark>神經網路</mark>來建立輸出。</li>
+      <li><span class="tag ok">正確</span>可以建立文字、圖像和語音等<mark>新內容</mark>。</li>
+      <li><span class="tag no">錯誤</span>僅根據搜尋條件提供結果清單（這是搜尋引擎的特性）。</li>
+      <li>生成回覆時，會利用預測對每個詞做<mark>機率性的選擇</mark>。</li>
+      <li>模型可以<mark>重新訓練</mark>，讓回覆更符合預期目的。</li></ul>` },
+    { h: "搜尋引擎 vs. 生成式 AI", html: `<ul>
+      <li>搜尋引擎：能明確說明資訊在網路上的<mark>來源</mark>。</li>
+      <li>生成式 AI：能根據提示詞生成在任何網站上都<mark>找不到的新材料</mark>。</li>
+      <li>估算 2200 年地球平均溫度這類任務，最適合<mark>預測性 AI（Predictive AI）</mark>。</li></ul>` },
+    { h: "LLM 訓練基本流程（依序）", html: `<ol>
+      <li>收集資料集</li><li>預處理和清理資料集</li><li>準備要輸入的資料</li><li>微調超參數</li></ol>` },
+    { h: "輸入與輸出類型", html: `<ul>
+      <li>聽取不同口音演繹電影場景對話：<mark>文字生成語音</mark>。</li>
+      <li>動物尋家海報：主要輸出為<mark>圖像</mark>與<mark>文字</mark>。</li></ul>` },
+    { h: "客製化與架構選擇", html: `<ul>
+      <li>客製 Copilot / GPT：向聊天機器人輸入<mark>一組指令和資訊</mark>，讓它準備好執行特定任務。</li>
+      <li>結合莎士比亞與 J.K. 羅琳風格：使用包含兩者作品的 <mark>Transformer 模型</mark>，建立<mark>輕量 GPT</mark>。</li>
+      <li>多科目輔導工具：使用<mark>客製的基於變換器（custom transformer-based）模型</mark>，針對每個科目提供具體指令。</li>
+      <li>貸款申請流程的多代理人分工：<mark>LangChain</mark>。</li>
+      <li>建立商標、計畫書等現成商業解決方案：<mark>ChatGPT</mark>。</li></ul>` },
+    { h: "AI 工具與功能配對", html: `<ul>
+      <li><b>Adobe Express</b>：生成圖像和風格字體，並按預定時間發佈至社群媒體。</li>
+      <li><b>Azure AI Studio</b>：關聯一系列 AI 來執行業務任務。</li>
+      <li><b>Canva</b>：建立設計、簡報與行銷素材。</li>
+      <li><b>ChatGPT</b>：參與對話、回答問題並提供資訊。</li></ul>` }
+  ],
+  qs: [
+    { q: "下列關於生成式 AI 特性的敘述，何者「錯誤」？", o: ["使用神經網路來建立輸出", "可以建立文字、圖像和語音等新內容", "僅根據搜尋條件提供結果清單", "可以重新訓練，以生成更符合目的的回覆"], a: 2,
+      e: "「僅根據搜尋條件提供結果清單」是搜尋引擎的特性。生成式 AI 會用神經網路產生新的內容。" },
+    { q: "生成式 AI 在生成回覆時，如何決定回覆中的每個詞？", o: ["從資料庫中逐字複製最相近的句子", "利用預測，對每個詞進行機率性的選擇", "依照固定規則表查詢對應詞彙", "隨機挑選字典中的詞彙"], a: 1,
+      e: "生成式 AI（如 LLM）根據上下文預測下一個詞的機率分布，再以機率性方式選詞，因此同一提示詞可能得到不同回覆。" },
+    { q: "下列何者最能說明搜尋引擎與生成式 AI 的差異？", o: ["搜尋引擎能生成全新內容；生成式 AI 只能列出網址", "兩者都只能整理既有網頁內容", "搜尋引擎能明確說明資訊來源；生成式 AI 能生成任何網站上都找不到的新材料", "生成式 AI 一定會標示每句話的出處"], a: 2,
+      e: "搜尋引擎的強項是指出資訊在網路上的來源；生成式 AI 則能依提示詞創造出新的材料。" },
+    { q: "研究人員想研究資料並估算出 2200 年地球上的平均溫度，最適合的 AI 類型為何？", o: ["生成式 AI", "預測性 AI（Predictive AI）", "對話式 AI", "電腦視覺 AI"], a: 1,
+      e: "根據歷史資料推估未來數值屬於預測任務，最適合預測性 AI。" },
+    { q: "大型語言模型（LLM）的訓練基本流程，正確順序為何？", o: ["收集資料集 → 預處理和清理資料集 → 準備要輸入的資料 → 微調超參數", "準備要輸入的資料 → 收集資料集 → 微調超參數 → 預處理和清理資料集", "微調超參數 → 收集資料集 → 預處理和清理資料集 → 準備要輸入的資料", "收集資料集 → 微調超參數 → 準備要輸入的資料 → 預處理和清理資料集"], a: 0,
+      e: "先有資料（收集），再清理（預處理），接著整理成模型可吃的格式（準備輸入），最後調整訓練設定（微調超參數）。" },
+    { q: "想聽取以不同口音演繹電影場景對話，應使用哪一種生成類型？", o: ["文字生成圖像", "語音轉文字", "文字生成語音", "圖像生成文字"], a: 2,
+      e: "將劇本文字轉成不同口音的語音，屬於文字生成語音（Text-to-Speech）。" },
+    { q: "為動物收容所製作「動物尋家」海報，最主要的兩種輸出類型為何？", o: ["影片與音訊", "圖像與文字", "程式碼與表格", "語音與文字"], a: 1,
+      e: "海報需要動物照片或插圖（圖像）以及標題、說明文字（文字）。" },
+    { q: "「客製化 Microsoft Copilot / GPT」指的是什麼？", o: ["重新從零訓練一個新的大型語言模型", "向聊天機器人輸入一組指令和資訊，讓它準備好執行特定任務", "購買更大的伺服器以加快回應速度", "把聊天機器人安裝到本機電腦"], a: 1,
+      e: "客製 GPT / Copilot 是透過預先設定的指令與參考資訊，讓聊天機器人專門處理某類任務，不需要重新訓練模型。" },
+    { q: "想讓 AI 結合莎士比亞與 J.K. 羅琳兩位作家的寫作風格，最適合的做法為何？", o: ["分別詢問兩個不同的聊天機器人再手動合併", "使用包含兩者作品的 Transformer 模型，建立輕量 GPT", "使用擴散模型生成兩人的肖像", "使用預測性 AI 預測兩人的下一部作品"], a: 1,
+      e: "以包含兩位作家作品的 Transformer 模型為基礎建立輕量 GPT，才能讓模型學到並融合兩種風格。" },
+    { q: "使用 ChatGPT 製作多科目輔導工具，最有效且準確的方法為何？", o: ["所有科目共用一段通用提示詞", "使用客製的基於變換器（custom transformer-based）模型，針對每個科目提供具體指令", "只開放數學科，避免其他科目出錯", "讓學生自行搜尋網路答案"], a: 1,
+      e: "不同科目需要不同的教學方式與知識範圍，用客製的 transformer-based 模型並為每科給具體指令最有效。" },
+    { q: "自動化貸款申請流程包含獲取信用記錄、評分、發送簡訊等獨立任務，最適合通過「多代理人分工」推動合作開發的工具為何？", o: ["Canva", "Adobe Express", "LangChain", "DALL·E"], a: 2,
+      e: "LangChain 可以串接多個代理人（Agent），讓每個代理人負責一個獨立任務並協同完成流程。" },
+    { q: "新創公司想建立商標、撰寫計畫書，最適合使用哪一種現成商業解決方案？", o: ["ChatGPT", "LangChain", "Azure AI Studio", "自行訓練的 LLM"], a: 0,
+      e: "建立商標構想與撰寫計畫書屬於通用任務，直接使用現成的 ChatGPT 即可，不需要開發或串接工具。" },
+    { q: "哪一個工具可以生成圖像和風格字體，並按預定時間發佈至社群媒體？", o: ["ChatGPT", "Adobe Express", "Azure AI Studio", "LangChain"], a: 1,
+      e: "Adobe Express 具備生成圖像、風格字體，以及排程發佈到社群媒體的功能。" },
+    { q: "哪一個平台允許關聯一系列 AI 來執行業務任務？", o: ["Canva", "Adobe Express", "Azure AI Studio", "ChatGPT"], a: 2,
+      e: "Azure AI Studio 可串接多個 AI 模型與服務，組成執行業務任務的流程。Canva 則用於設計、簡報與行銷素材。" }
+  ]
+},
+{
+  id: "ch2", n: "考綱二", title: "基礎提示工程", en: "Prompt Engineering",
+  notes: [
+    { h: "提示詞四大組成", html: `<ul>
+      <li><b>假定角色（Role）</b>：「你是一位在［目標受眾領域］有著豐富經驗的高級行銷經理」</li>
+      <li><b>特定指令（Specific Instruction）</b>：「根據客戶對新產品的喜好程度，為他們生成郵件。請使用這些詳細資訊…」</li>
+      <li><b>上下文（Context）</b>：「我們需要為清單［指向試算表的連結］中的每個人生成電子郵件…」</li>
+      <li><b>約束條件及舉例（Constraints &amp; Examples）</b>：「郵件內容需要個性化，而且在語氣上應模仿一個有好消息要告訴你的摯友」</li></ul>` },
+    { h: "進階提示技術", html: `<ul>
+      <li><b>提示詞鏈接（Prompt Chaining）</b>：把任務拆成子任務，<mark>上一個提示詞的輸出作為下一個的輸入</mark>。</li>
+      <li><b>思維鏈（Chain of Thought）</b>：提供<mark>邏輯推導步驟與解答範例</mark>（如紅＋藍 → 紫的色彩推導），引導模型逐步推理。</li>
+      <li><b>反向提示詞（Reverse Prompting）</b>：<mark>先讓 AI 詢問必要資訊</mark>，再生成最終內容。範例：「讓我提供簡歷所需的每個關鍵細節，然後使用這些資訊生成簡歷」。</li></ul>` },
+    { h: "擴散模型生成圖像（依序）", html: `<ol>
+      <li>使用<mark>分詞（tokenization）</mark>解析詞彙（如檯燈與桌子）。</li>
+      <li>使用<mark>雜訊生成</mark>產生隨機像素值。</li>
+      <li>使用<mark>擴散（Diffusion）</mark>更改數值並開始建立圖像。</li>
+      <li>使用經過訓練的<mark>優化演算法</mark>，讓圖像更符合提示詞。</li></ol>` },
+    { h: "應用情境與優選提示詞", html: `<ul>
+      <li>度假行程：「制定一個為期十天的旅行行程，包括飛往距離其中一個景點相對較近的機場，並租車遊覽美國西部的多個著名景點」。</li>
+      <li>總結現有內容：「托爾金《魔戒》的情節是什麼？請用 500 字概括」、「今天會議的主要議題是什麼？（同時提供會議記錄）」。</li>
+      <li>轉換簡報促進學習：「製作一個簡報，將內容轉換為吸引人且易於理解的格式」。</li></ul>` }
+  ],
+  qs: [
+    { q: "「你是一位在［目標受眾領域］有著豐富經驗的高級行銷經理」屬於提示詞的哪一個組成？", o: ["特定指令", "上下文", "生成式 AI 假定角色（Role）", "約束條件及舉例"], a: 2,
+      e: "以「你是一位…」開頭、替 AI 設定身分與專業背景，屬於假定角色。" },
+    { q: "「根據客戶對新產品的喜好程度，為他們生成郵件。請使用這些詳細資訊…」屬於提示詞的哪一個組成？", o: ["特定指令（Specific Instruction）", "假定角色", "約束條件及舉例", "上下文"], a: 0,
+      e: "明確告訴 AI 要做什麼（生成郵件）以及依據什麼（喜好程度），屬於特定指令。" },
+    { q: "「我們需要為清單［指向試算表的連結］中的每個人生成電子郵件…」屬於提示詞的哪一個組成？", o: ["假定角色", "完整的提示詞上下文（Context）", "特定指令", "約束條件及舉例"], a: 1,
+      e: "說明任務背景與資料來源（試算表清單），屬於上下文。" },
+    { q: "「郵件內容需要個性化，而且在語氣上應模仿一個有好消息要告訴你的摯友」屬於提示詞的哪一個組成？", o: ["上下文", "特定指令", "假定角色", "約束條件及舉例（Constraints & Examples）"], a: 3,
+      e: "限制內容需個性化、指定語氣風格，屬於約束條件及舉例。" },
+    { q: "將任務分解為更小的子任務，並使用一個提示詞的輸出作為下一個提示詞的輸入，這種技術稱為？", o: ["思維鏈（Chain of Thought）", "反向提示詞（Reverse Prompting）", "提示詞鏈接（Prompt Chaining）", "零樣本提示（Zero-shot）"], a: 2,
+      e: "「輸出接到下一個輸入」是提示詞鏈接的定義。" },
+    { q: "在提示詞中提供「紅色＋藍色混合得出紫色」的逐步推導與解答範例，引導模型逐步推理，這是哪一種技術？", o: ["提示詞鏈接", "思維鏈（Chain of Thought）", "反向提示詞", "角色扮演"], a: 1,
+      e: "思維鏈透過示範推理步驟，讓模型學會一步一步思考後再回答。" },
+    { q: "使用反向提示詞（Reverse Prompting）生成簡歷時，下列哪一個提示詞最佳？", o: ["「幫我寫一份簡歷。」", "「讓我提供簡歷所需的每個關鍵細節，然後使用這些資訊生成簡歷。」", "「請給我一份網路上最受歡迎的簡歷範本。」", "「寫一份讓人一定錄取我的簡歷。」"], a: 1,
+      e: "反向提示詞的重點是先引導 AI 詢問、收集必要資訊，再產出最終內容。" },
+    { q: "擴散模型（Diffusion Model）生成圖像的正確順序為何？", o: ["雜訊生成 → 分詞 → 優化演算法 → 擴散", "分詞 → 擴散 → 雜訊生成 → 優化演算法", "分詞 → 雜訊生成 → 擴散 → 優化演算法", "擴散 → 分詞 → 雜訊生成 → 優化演算法"], a: 2,
+      e: "先用分詞理解提示詞（如「檯燈」「桌子」），再產生隨機雜訊像素，透過擴散逐步改變數值形成圖像，最後用優化演算法讓圖像更符合提示詞。" },
+    { q: "擴散模型生成圖像的「第一步」是什麼？", o: ["使用分詞（tokenization）解析詞彙", "使用雜訊生成產生隨機像素值", "使用擴散更改數值", "使用優化演算法調整圖像"], a: 0,
+      e: "模型必須先理解提示詞，所以第一步是分詞，解析出「檯燈」「桌子」等詞彙。" },
+    { q: "想用 AI 規劃美國西部度假行程，下列哪一個提示詞最佳？", o: ["「推薦美國好玩的地方。」", "「制定一個為期十天的旅行行程，包括飛往距離其中一個景點相對較近的機場，並租車遊覽美國西部的多個著名景點。」", "「美國西部有什麼？」", "「給我一張美國地圖。」"], a: 1,
+      e: "最佳提示詞包含具體天數、交通方式與區域範圍，AI 才能產生可執行的行程。" },
+    { q: "下列哪一個提示詞屬於「總結現有內容」？", o: ["「寫一個全新的奇幻故事。」", "「設計一個魔戒的商標。」", "「今天會議的主要議題是什麼？（同時提供會議記錄）」", "「預測明年的會議數量。」"], a: 2,
+      e: "提供會議記錄並要求整理主要議題，是在總結既有內容。「托爾金《魔戒》的情節是什麼？請用 500 字概括」也屬此類。" },
+    { q: "想把既有內容轉換成簡報以促進學習，下列哪一個提示詞最合適？", o: ["「製作一個簡報，將內容轉換為吸引人且易於理解的格式。」", "「把內容翻譯成英文。」", "「刪除內容中的所有圖表。」", "「把內容改寫成一首詩。」"], a: 0,
+      e: "目標是促進學習，因此要求轉換為「吸引人且易於理解」的簡報格式最合適。" }
+  ]
+},
+{
+  id: "ch3", n: "考綱三", title: "提示優化與資料驗證", en: "Prompt Refinement",
+  notes: [
+    { h: "辨識有偏見的提示詞", html: `<ul>
+      <li><span class="tag no">有偏見</span>「生成一個 150 字的摘要，內容關於大壩拆除的<b>主要成就</b>，重點關注對生態系統產生的最重大影響」（預設只看正面）。</li>
+      <li><span class="tag no">有偏見</span>「強調可再生能源比化石燃料能耗更低、更可靠…」（預設傾斜立場）。</li>
+      <li><span class="tag ok">無偏見</span>「生成一份摘要，內容關於<mark>獨立協力廠商研究</mark>中針對拆除大壩提供的建議，重點關注在史密斯河上實施該專案的<mark>可行性見解和潛在策略</mark>」。</li></ul>` },
+    { h: "個人化與後續優化", html: `<ul>
+      <li>健身計畫不符合個人狀況時：提供<mark>自己的時間表</mark>，並說明<mark>個人身體狀況面臨的限制</mark>。</li>
+      <li>要更詳細、更有針對性的回覆：「提供<mark>詳細的範例</mark>，說明最近在機器學習演算法方面取得的突破及其對<mark>汽車和金融行業</mark>的影響」。</li></ul>` },
+    { h: "圖表與資料處理", html: `<ul>
+      <li>保留原始資料含義的故事寫作：「編寫一個麵包師發現規律的故事，在故事中<mark>包括圖表中的資料</mark>，暗示高脂肪食物與藥物用量之間的關係」。</li>
+      <li><span class="tag ok">是</span>將每週淨利潤資料轉換為季度報告，總結每季總淨利潤和平均淨利潤。</li>
+      <li><span class="tag no">否</span>將散點圖 / 淨利潤轉換為宣傳單或語音（無法直接作為正規報告）。</li></ul>` }
+  ],
+  qs: [
+    { q: "下列哪一個關於拆除大壩的提示詞屬於「中性、無偏見」的請求？", o: ["「生成一個 150 字的摘要，內容關於大壩拆除的主要成就，重點關注對生態系統產生的最重大影響。」", "「生成一份摘要，內容關於獨立協力廠商研究中針對拆除大壩提供的建議，重點關注在史密斯河上實施該專案的可行性見解和潛在策略。」", "「說明為什麼拆除大壩是錯誤的決定。」", "「列出拆除大壩的所有好處。」"], a: 1,
+      e: "引用獨立第三方研究、聚焦可行性與策略，沒有預設正面或負面立場，因此是無偏見的提示詞。" },
+    { q: "「生成一個 150 字的摘要，內容關於大壩拆除的主要成就，重點關注對生態系統產生的最重大影響」為何被視為有偏見？", o: ["字數限制太短", "預設只談「成就」，引導出單方面正面的內容", "沒有指定輸出語言", "沒有提供角色設定"], a: 1,
+      e: "「主要成就」一詞已預設拆除大壩是好事，AI 會只產生支持性的內容。" },
+    { q: "「強調可再生能源比化石燃料能耗更低、更可靠…」這類提示詞的問題是什麼？", o: ["沒有問題，是中性請求", "預設傾斜立場，屬於有偏見的提示詞", "格式不正確", "缺少輸出字數"], a: 1,
+      e: "要求 AI「強調」某一方的優點，已先替結論選邊站，屬於有偏見的提示詞。" },
+    { q: "AI 生成的健身計畫不符合你的個人狀況，最佳的改進方式為何？", o: ["換一個 AI 工具重新問同一個問題", "提供自己的時間表，並說明個人身體狀況面臨的限制", "要求 AI 生成更長的計畫", "直接照原計畫執行"], a: 1,
+      e: "補充個人化資訊（時間表、身體限制），AI 才能產生符合你實際狀況的計畫。" },
+    { q: "想獲得關於機器學習的更詳細、最有針對性的回覆，下列哪一個後續提示詞最佳？", o: ["「多說一點機器學習。」", "「機器學習是什麼？」", "「提供詳細的範例，說明最近在機器學習演算法方面取得的突破及其對汽車和金融行業的影響。」", "「機器學習好不好？」"], a: 2,
+      e: "指定「詳細範例」「最近的突破」「汽車和金融行業」等明確範圍，回覆才會具體且有針對性。" },
+    { q: "想把圖表資料寫成故事，同時保留原始資料的含義，下列哪一個提示詞最合適？", o: ["「寫一個關於麵包師的有趣故事。」", "「編寫一個麵包師發現規律的故事，在故事中包括圖表中的資料，暗示高脂肪食物與藥物用量之間的關係。」", "「用圖表資料寫一首詩。」", "「把圖表刪掉，改寫成童話。」"], a: 1,
+      e: "明確要求故事「包括圖表中的資料」並點出資料呈現的關係，才能保留原始含義。" },
+    { q: "下列哪一種格式轉換「適合」用於撰寫正式報告？", o: ["將散點圖轉換為宣傳單", "將淨利潤資料轉換為語音", "將每週淨利潤資料轉換為季度報告，總結每季總淨利潤和平均淨利潤", "將淨利潤資料轉換為社群貼文"], a: 2,
+      e: "季度報告彙整總額與平均值，符合正式報告需求；宣傳單或語音無法直接作為正規報告。" },
+    { q: "判斷：將散點圖的淨利潤資料轉換為宣傳單，可以直接作為正規財務報告。", tf: true, a: 1,
+      e: "錯誤。宣傳單或語音是行銷 / 傳播用途，無法直接作為正規報告。" }
+  ]
+},
+{
+  id: "ch4", n: "考綱四", title: "倫理、法律、社會影響與安全", en: "Ethics & Governance",
+  notes: [
+    { h: "社會影響", html: `<ul>
+      <li>正面影響：可存取海量資料進行<mark>醫學研究</mark>、促進<mark>高效耕作</mark>、詳細瞭解<mark>世界文化</mark>。</li>
+      <li>未保護客戶敏感健康 / 個資的後果：<mark>身分被盜用</mark>、陷入<mark>資料隱私訴訟</mark>、客戶<mark>缺乏信任</mark>。</li>
+      <li>客服聊天機器人風險（皆正確）：敏感個人與財務資料處理不當導致客戶不滿；缺乏人為監督造成不準確；歧視性輸入導致偏見。</li></ul>` },
+    { h: "偏見判斷", html: `<ul>
+      <li><span class="tag ok">正確</span>使用有偏見資料訓練的圖像模型會輸出有偏見圖像。</li>
+      <li><span class="tag no">錯誤</span>ChatGPT 能可靠地消除回覆中的偏見。</li>
+      <li><span class="tag ok">正確</span>應人工審查 AI 生成內容是否存在偏見。</li></ul>` },
+    { h: "偏見發生階段（自駕車案例）", html: `<ul>
+      <li><b>資料收集</b>：攝像頭僅在白天錄製影片。</li>
+      <li><b>數據標注</b>：僅對停車標誌與交通信號燈進行分詞。</li>
+      <li><b>模型訓練</b>：資料包括根據身高採用不同加權值的行人。</li>
+      <li><b>部署</b>：汽車銷往各處，但僅在單一城市進行測試。</li></ul>` },
+    { h: "驗證 AI 輸出", html: `<ul>
+      <li><span class="tag ok">是</span>在網際網路上搜尋，查證學術資源中的事實。</li>
+      <li><span class="tag ok">是</span>參考可靠的歷史資料庫或權威機構報告。</li>
+      <li><span class="tag no">否</span>使用另一個 AI 平台查證（可能產生相同的幻覺或偏見）。</li></ul>` },
+    { h: "法律與智慧財產權", html: `<ul>
+      <li>AI 招募流程需考慮：<mark>個人資料保護法、勞動法、智慧財產權法</mark>。</li>
+      <li>專利：AI <mark>不能是唯一的發明者</mark>；例如「使用人工智慧更正現有設計中不準確的地方」（含實質人類貢獻）才能申請。</li>
+      <li>避免在提示詞中放入姓名、年齡、位置、社群帳號等<mark>可識別個人資訊（PII）</mark>。</li>
+      <li>使用者須對 AI 生成內容<mark>負責</mark>，有害或侵權內容可能引發民事或刑事訴訟。</li></ul>` }
+  ],
+  qs: [
+    { q: "下列何者「不是」文中提到的生成式 AI 對社會的正面影響？", o: ["可存取海量資料進行醫學研究", "可促進高效耕作", "可詳細瞭解世界文化", "可完全取代人類審查，不需任何監督"], a: 3,
+      e: "生成式 AI 仍需要人為監督，缺乏監督反而是風險。前三項是正面影響。" },
+    { q: "企業未採取防護措施保護客戶敏感健康資料，可能造成哪些後果？", o: ["客戶身分被盜用", "陷入消費者資料隱私的訴訟", "客戶缺乏信任", "以上皆是"], a: 3,
+      e: "身分盜用、隱私訴訟、失去客戶信任三者都是未保護個資的後果。" },
+    { q: "關於導入客服聊天機器人的風險，下列哪些敘述正確？（甲）對敏感個人與財務資料處理不當導致客戶不滿（乙）缺乏人為監督造成不準確（丙）歧視性輸入會導致偏見", o: ["僅甲", "僅甲、乙", "僅乙、丙", "甲、乙、丙皆正確"], a: 3,
+      e: "三項都是客服聊天機器人的實際風險。" },
+    { q: "判斷：使用有偏見資料訓練的圖像模型，會輸出有偏見的圖像。", tf: true, a: 0,
+      e: "正確。模型會學習並重現訓練資料中的偏見。" },
+    { q: "判斷：ChatGPT 能可靠地消除回覆中的偏見，因此不需要人工審查。", tf: true, a: 1,
+      e: "錯誤。ChatGPT 無法可靠消除偏見，應由人工審查 AI 生成內容是否存在偏見。" },
+    { q: "自駕車開發中，「攝像頭僅在白天錄製影片」屬於哪一個階段產生的偏見？", o: ["資料收集", "數據標注", "模型訓練", "部署"], a: 0,
+      e: "只蒐集白天影像，資料本身就缺少夜間情境，屬於資料收集階段的偏見。" },
+    { q: "自駕車開發中，「僅對停車標誌與交通信號燈進行分詞（標注）」屬於哪一個階段產生的偏見？", o: ["資料收集", "數據標注", "模型訓練", "部署"], a: 1,
+      e: "只標注部分物件，其他物件（如行人、路標）沒被標記，屬於數據標注階段的偏見。" },
+    { q: "自駕車開發中，「資料包括根據身高採用不同加權值的行人」屬於哪一個階段產生的偏見？", o: ["資料收集", "數據標注", "模型訓練", "部署"], a: 2,
+      e: "在訓練時對不同身高的行人給予不同權重，屬於模型訓練階段的偏見。" },
+    { q: "自駕車開發中，「汽車銷往各處，但僅在單一城市進行測試」屬於哪一個階段產生的偏見？", o: ["資料收集", "數據標注", "模型訓練", "部署"], a: 3,
+      e: "上市使用的範圍遠大於測試範圍，屬於部署階段的偏見。" },
+    { q: "下列何者「不是」驗證 AI 輸出正確性的恰當方式？", o: ["在網際網路上搜尋，查證學術資源中的事實", "參考可靠的歷史資料庫或權威機構報告", "使用另一個 AI 平台查證事實", "比對原始文獻與官方統計資料"], a: 2,
+      e: "另一個 AI 可能產生相同的幻覺或偏見，不能當作可靠的查證來源。" },
+    { q: "企業導入 AI 招募流程時，需要考慮哪些法律？", o: ["個人資料保護法、勞動法、智慧財產權法", "交通法規、建築法", "稅法、關稅法", "海商法、航空法"], a: 0,
+      e: "招募涉及應徵者個資（個資法）、聘僱公平（勞動法）與 AI 產出內容的權利歸屬（智財權法）。" },
+    { q: "依照最高法院規範，下列哪一種情況可以申請專利？", o: ["完全由 AI 自動產生的發明，並列 AI 為唯一發明者", "使用人工智慧更正現有設計中不準確的地方（包含實質人類貢獻）", "直接將 AI 生成的設計圖原封不動送件", "請 AI 撰寫專利說明書後以 AI 名義申請"], a: 1,
+      e: "AI 不能是唯一的發明者，必須有實質的人類貢獻，例如利用 AI 協助更正既有設計的不準確之處。" },
+    { q: "為避免個人資訊洩漏，撰寫提示詞時應避免放入下列哪一類資訊？", o: ["一般產業趨勢", "公開的產品名稱", "姓名、年齡、位置與社群媒體帳號等可識別個人資訊（PII）", "文章的字數限制"], a: 2,
+      e: "可識別個人資訊（PII）一旦輸入提示詞，就可能被儲存或外洩，應避免使用。" },
+    { q: "使用生成式 AI 建立有害或侵權內容時，法律責任由誰承擔？", o: ["AI 模型本身", "AI 開發公司全權負責", "使用者必須對建立的內容負責", "沒有人需要負責"], a: 2,
+      e: "使用者須對使用生成式 AI 建立的內容負責，有害或侵權內容可能引發民事或刑事訴訟。" }
+  ]
+}
+];
+
+const KEYS = "ABCD";
+const STORE = "ccs-genai-quiz-v1";
+let answers = {}, peek = {}, examIds = [];
+try { const s = JSON.parse(localStorage.getItem(STORE) || "{}"); answers = s.answers || {}; examIds = s.examIds || []; } catch (e) {}
+function save() { try { localStorage.setItem(STORE, JSON.stringify({ answers, examIds })); } catch (e) {} }
+
+const ALL = [];
+CHAPTERS.forEach(ch => ch.qs.forEach((q, i) => { q.id = ch.id + "-" + (i + 1); q.ch = ch; if (q.tf) q.o = ["正確", "錯誤"]; ALL.push(q); }));
+const EXAM = { id: "exam", n: "模擬", title: "綜合模擬測驗", en: "從四大考綱隨機抽出 20 題" };
+
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function newExam() { examIds = shuffle(ALL.map(q => q.id)).slice(0, 20); Object.keys(answers).filter(k => k.startsWith("exam:")).forEach(k => delete answers[k]); save(); }
+if (!examIds.length || examIds.some(id => !ALL.find(q => q.id === id))) newExam();
+
+function keyOf(scope, q) { return scope === "exam" ? "exam:" + q.id : q.id; }
+function questionsOf(scope) { return scope === "exam" ? examIds.map(id => ALL.find(q => q.id === id)) : CHAPTERS.find(c => c.id === scope).qs; }
+function stats(scope) {
+  const qs = questionsOf(scope); let done = 0, right = 0;
+  qs.forEach(q => { const v = answers[keyOf(scope, q)]; if (v !== undefined) { done++; if (v === q.a) right++; } });
+  return { total: qs.length, done, right };
+}
+
+function renderNav(cur) {
+  const nav = document.getElementById("nav");
+  nav.innerHTML = [...CHAPTERS, EXAM].map(c => {
+    const s = stats(c.id);
+    return `<a href="#${c.id}" data-id="${c.id}" ${c.id === cur ? 'aria-current="page"' : ""}>
+      <span class="n">${c.n}</span><span class="t">${c.title}</span>
+      <span class="p">已答 ${s.done}/${s.total} · 答對 ${s.right}<span class="bar"><i style="width:${s.total ? s.done / s.total * 100 : 0}%"></i></span></span></a>`;
+  }).join("");
+}
+
+function qHTML(scope, q, idx) {
+  const k = keyOf(scope, q), v = answers[k], shown = v !== undefined || peek[k];
+  const opts = q.o.map((t, i) => {
+    let cls = "";
+    if (shown && i === q.a) cls = "correct"; else if (v === i && i !== q.a) cls = "wrong";
+    return `<li><button class="opt ${cls}" data-k="${k}" data-i="${i}" ${shown ? "disabled" : ""}><span class="k">${q.tf ? (i ? "✕" : "○") : KEYS[i]}</span><span>${t}</span></button></li>`;
+  }).join("");
+  let exp = "";
+  if (shown) {
+    const verdict = v === undefined ? `<span class="verdict peek">答案 ${q.tf ? q.o[q.a] : KEYS[q.a]}</span>`
+      : v === q.a ? `<span class="verdict ok">答對了</span>` : `<span class="verdict no">答錯了，正確答案是 ${q.tf ? q.o[q.a] : KEYS[q.a]}</span>`;
+    exp = `<div class="exp">${verdict}${q.e}</div>`;
+  }
+  const src = scope === "exam" ? `<p class="q-src">${q.ch.n}・${q.ch.title}</p>` : "";
+  return `<li class="q"><div class="q-top"><span class="q-no">Q${idx + 1}</span><span class="q-type">${q.tf ? "是非" : "單選"}</span><div style="min-width:0"><p class="q-text">${q.q}</p>${src}</div></div><ul class="opts">${opts}</ul>${exp}</li>`;
+}
+
+function render(scope) {
+  const isExam = scope === "exam";
+  const ch = isExam ? EXAM : CHAPTERS.find(c => c.id === scope);
+  const qs = questionsOf(scope), s = stats(scope);
+  const main = document.getElementById("main");
+  const notes = isExam ? "" : `<section><h3>重點整理 <small>KEY POINTS</small></h3><div class="notes">${ch.notes.map(n => `<div class="note"><h4>${n.h}</h4>${n.html}</div>`).join("")}</div></section>`;
+  const result = s.done === s.total ? `<div class="result"><strong>${s.right} / ${s.total}</strong><span>${s.right === s.total ? "全部答對，這一章已經熟練。" : `答錯 ${s.total - s.right} 題，建議回頭複習${isExam ? "標示的考綱" : "上方重點整理"}後重新作答。`}</span></div>` : "";
+  main.innerHTML = `
+    <header class="ch-head"><span class="eyebrow">${isExam ? "Mock Exam" : ch.n}</span><h2>${ch.title}</h2><span class="en">${ch.en}</span></header>
+    ${notes}
+    <section>
+      <h3>${isExam ? "測驗題目" : "考題與解析"} <small>${qs.length} QUESTIONS</small></h3>
+      <div class="quiz-tools">
+        <span class="score">答對 <b>${s.right}</b> / 已答 ${s.done} / 共 ${s.total} 題</span>
+        <button class="btn" id="peekAll">顯示全部解析</button>
+        <button class="btn" id="reset">重新作答</button>
+        ${isExam ? `<button class="btn primary" id="reroll">重新抽題</button>` : ""}
+      </div>
+      <ol class="qs">${qs.map((q, i) => qHTML(scope, q, i)).join("")}</ol>
+      ${result}
+    </section>`;
+  renderNav(scope);
+}
+
+let current = "ch1";
+function go(id, scroll) {
+  current = [...CHAPTERS, EXAM].some(c => c.id === id) ? id : "ch1";
+  render(current);
+  if (scroll) window.scrollTo({ top: 0 });
+}
+
+document.addEventListener("click", e => {
+  const opt = e.target.closest(".opt");
+  if (opt && !opt.disabled) {
+    answers[opt.dataset.k] = +opt.dataset.i; save();
+    const y = window.scrollY; render(current); window.scrollTo({ top: y });
+    return;
+  }
+  const a = e.target.closest("nav a");
+  if (a) { e.preventDefault(); history.replaceState(null, "", "#" + a.dataset.id); go(a.dataset.id, true); return; }
+  const y = window.scrollY;
+  if (e.target.id === "peekAll") { questionsOf(current).forEach(q => peek[keyOf(current, q)] = true); render(current); window.scrollTo({ top: y }); }
+  if (e.target.id === "reset") { questionsOf(current).forEach(q => { delete answers[keyOf(current, q)]; delete peek[keyOf(current, q)]; }); save(); render(current); }
+  if (e.target.id === "reroll") { peek = {}; newExam(); render(current); }
+});
+window.addEventListener("hashchange", () => go(location.hash.slice(1), true));
+go(location.hash.slice(1), false);
+</script>
+
+</body>
+</html>
