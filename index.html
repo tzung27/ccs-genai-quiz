@@ -67,6 +67,14 @@ aside { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align
 .brand .code { font-family: var(--f-mono); font-size: 12px; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
 .brand h1 { font-family: var(--f-display); font-weight: 900; font-size: 26px; line-height: 1.3; margin: 0; text-wrap: balance; }
 .brand p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.search { display: flex; flex-direction: column; gap: 6px; }
+.search label { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+.search input {
+  width: 100%; font: inherit; font-size: 15px; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px;
+}
+.search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; padding: 24px 20px; color: var(--muted); }
 nav { display: flex; flex-direction: column; gap: 4px; }
 nav a {
   display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline;
@@ -152,6 +160,10 @@ section > h3 small { font-family: var(--f-mono); font-size: 12px; color: var(--m
       <span class="code">CCS · Generative AI Foundations</span>
       <h1>生成式 AI 核心能力題庫</h1>
       <p>四大考綱重點整理，每章附考題與解析。點選選項即可看到答案，作答進度會記在這台裝置上。</p>
+    </div>
+    <div class="search">
+      <label for="q-search">搜尋題目</label>
+      <input id="q-search" type="search" placeholder="例如：LangChain、偏見、擴散" autocomplete="off">
     </div>
     <nav id="nav"></nav>
   </aside>
@@ -377,8 +389,24 @@ function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { co
 function newExam() { examIds = shuffle(ALL.map(q => q.id)).slice(0, 20); Object.keys(answers).filter(k => k.startsWith("exam:")).forEach(k => delete answers[k]); save(); }
 if (!examIds.length || examIds.some(id => !ALL.find(q => q.id === id))) newExam();
 
+let query = "", terms = [];
+function setQuery(v) { query = v.trim(); terms = query.toLowerCase().split(/\s+/).filter(Boolean); }
+function esc(s) { return s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+function hl(s) {
+  if (!terms.length) return s;
+  const re = new RegExp("(" + terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi");
+  return s.replace(re, "<mark>$1</mark>");
+}
+function matches(q) {
+  const hay = [q.q, ...q.o, q.e, q.ch.n, q.ch.title].join(" ").toLowerCase();
+  return terms.every(t => hay.includes(t));
+}
+
 function keyOf(scope, q) { return scope === "exam" ? "exam:" + q.id : q.id; }
-function questionsOf(scope) { return scope === "exam" ? examIds.map(id => ALL.find(q => q.id === id)) : CHAPTERS.find(c => c.id === scope).qs; }
+function questionsOf(scope) {
+  if (scope === "search") return ALL.filter(matches);
+  return scope === "exam" ? examIds.map(id => ALL.find(q => q.id === id)) : CHAPTERS.find(c => c.id === scope).qs;
+}
 function stats(scope) {
   const qs = questionsOf(scope); let done = 0, right = 0;
   qs.forEach(q => { const v = answers[keyOf(scope, q)]; if (v !== undefined) { done++; if (v === q.a) right++; } });
@@ -389,7 +417,7 @@ function renderNav(cur) {
   const nav = document.getElementById("nav");
   nav.innerHTML = [...CHAPTERS, EXAM].map(c => {
     const s = stats(c.id);
-    return `<a href="#${c.id}" data-id="${c.id}" ${c.id === cur ? 'aria-current="page"' : ""}>
+    return `<a href="#${c.id}" data-id="${c.id}" ${c.id === cur && !query ? 'aria-current="page"' : ""}>
       <span class="n">${c.n}</span><span class="t">${c.title}</span>
       <span class="p">已答 ${s.done}/${s.total} · 答對 ${s.right}<span class="bar"><i style="width:${s.total ? s.done / s.total * 100 : 0}%"></i></span></span></a>`;
   }).join("");
@@ -400,19 +428,35 @@ function qHTML(scope, q, idx) {
   const opts = q.o.map((t, i) => {
     let cls = "";
     if (shown && i === q.a) cls = "correct"; else if (v === i && i !== q.a) cls = "wrong";
-    return `<li><button class="opt ${cls}" data-k="${k}" data-i="${i}" ${shown ? "disabled" : ""}><span class="k">${q.tf ? (i ? "✕" : "○") : KEYS[i]}</span><span>${t}</span></button></li>`;
+    return `<li><button class="opt ${cls}" data-k="${k}" data-i="${i}" ${shown ? "disabled" : ""}><span class="k">${q.tf ? (i ? "✕" : "○") : KEYS[i]}</span><span>${hl(t)}</span></button></li>`;
   }).join("");
   let exp = "";
   if (shown) {
     const verdict = v === undefined ? `<span class="verdict peek">答案 ${q.tf ? q.o[q.a] : KEYS[q.a]}</span>`
       : v === q.a ? `<span class="verdict ok">答對了</span>` : `<span class="verdict no">答錯了，正確答案是 ${q.tf ? q.o[q.a] : KEYS[q.a]}</span>`;
-    exp = `<div class="exp">${verdict}${q.e}</div>`;
+    exp = `<div class="exp">${verdict}${hl(q.e)}</div>`;
   }
-  const src = scope === "exam" ? `<p class="q-src">${q.ch.n}・${q.ch.title}</p>` : "";
-  return `<li class="q"><div class="q-top"><span class="q-no">Q${idx + 1}</span><span class="q-type">${q.tf ? "是非" : "單選"}</span><div style="min-width:0"><p class="q-text">${q.q}</p>${src}</div></div><ul class="opts">${opts}</ul>${exp}</li>`;
+  const src = scope === "exam" || scope === "search" ? `<p class="q-src">${q.ch.n}・${q.ch.title}</p>` : "";
+  return `<li class="q"><div class="q-top"><span class="q-no">Q${idx + 1}</span><span class="q-type">${q.tf ? "是非" : "單選"}</span><div style="min-width:0"><p class="q-text">${hl(q.q)}</p>${src}</div></div><ul class="opts">${opts}</ul>${exp}</li>`;
+}
+
+function renderSearch() {
+  const qs = questionsOf("search"), s = stats("search");
+  document.getElementById("main").innerHTML = `
+    <header class="ch-head"><span class="eyebrow">Search</span><h2>「${esc(query)}」的搜尋結果</h2><span class="en">在 ${ALL.length} 題中找到 ${qs.length} 題，搜尋範圍包含題目、選項與解析。以空格分隔多個關鍵字時，會找出同時符合的題目。</span></header>
+    <section>
+      ${qs.length ? `<div class="quiz-tools">
+        <span class="score">答對 <b>${s.right}</b> / 已答 ${s.done} / 共 ${s.total} 題</span>
+        <button class="btn" id="peekAll">顯示全部解析</button>
+      </div>
+      <ol class="qs">${qs.map((q, i) => qHTML("search", q, i)).join("")}</ol>`
+      : `<div class="empty">沒有符合「${esc(query)}」的題目。試試較短的關鍵字，或檢查有無錯字。</div>`}
+    </section>`;
+  renderNav(current);
 }
 
 function render(scope) {
+  if (query) return renderSearch();
   const isExam = scope === "exam";
   const ch = isExam ? EXAM : CHAPTERS.find(c => c.id === scope);
   const qs = questionsOf(scope), s = stats(scope);
@@ -451,11 +495,17 @@ document.addEventListener("click", e => {
     return;
   }
   const a = e.target.closest("nav a");
-  if (a) { e.preventDefault(); history.replaceState(null, "", "#" + a.dataset.id); go(a.dataset.id, true); return; }
-  const y = window.scrollY;
-  if (e.target.id === "peekAll") { questionsOf(current).forEach(q => peek[keyOf(current, q)] = true); render(current); window.scrollTo({ top: y }); }
+  if (a) { e.preventDefault(); setQuery(""); searchBox.value = ""; history.replaceState(null, "", "#" + a.dataset.id); go(a.dataset.id, true); return; }
+  const y = window.scrollY, view = query ? "search" : current;
+  if (e.target.id === "peekAll") { questionsOf(view).forEach(q => peek[keyOf(view, q)] = true); render(current); window.scrollTo({ top: y }); }
   if (e.target.id === "reset") { questionsOf(current).forEach(q => { delete answers[keyOf(current, q)]; delete peek[keyOf(current, q)]; }); save(); render(current); }
   if (e.target.id === "reroll") { peek = {}; newExam(); render(current); }
+});
+const searchBox = document.getElementById("q-search");
+searchBox.addEventListener("input", () => {
+  const had = !!query; setQuery(searchBox.value);
+  render(current);
+  if (!!query !== had) window.scrollTo({ top: 0 });
 });
 window.addEventListener("hashchange", () => go(location.hash.slice(1), true));
 go(location.hash.slice(1), false);
